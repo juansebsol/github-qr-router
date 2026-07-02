@@ -66,14 +66,6 @@
     button.small { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
     .toolbar { margin-bottom: 1rem; }
     .status { font-size: 0.85rem; color: #666; margin-top: 0.75rem; }
-    .github-box {
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px solid #e0e0e0;
-    }
-    .github-box summary { cursor: pointer; font-size: 0.9rem; color: #666; }
-    .github-box input { margin-top: 0.5rem; }
-    .hint { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
     .login-box {
       max-width: 320px;
       margin: 4rem auto;
@@ -105,16 +97,6 @@
       <button type="button" id="logout">Sign out</button>
     </div>
     <p class="status" id="status"></p>
-
-    <details class="github-box">
-      <summary>Push directly to GitHub (optional)</summary>
-      <label for="token">Personal access token (repo scope)</label>
-      <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
-      <p class="hint">Token stays in this tab only. <a href="https://github.com/settings/tokens" target="_blank">Create one</a> with repo access.</p>
-      <div class="actions">
-        <button type="button" class="primary" id="push">Push to GitHub</button>
-      </div>
-    </details>
   </div>
 
   <script>
@@ -125,11 +107,8 @@
       ? "/" + pathSegments[0]
       : "";
     const baseUrl = location.origin + repoBase;
-    const repo = pathSegments[0] || "";
-    const owner = location.hostname.split(".")[0];
 
     let links = {};
-    let fileSha = null;
 
     async function hashPassword(password) {
       const data = new TextEncoder().encode(password);
@@ -281,7 +260,7 @@
       const id = genId();
       links[id] = { url: "", description: "" };
       render();
-      setStatus(`Created ${id}. Set URL and download or push.`);
+      setStatus(`Created ${id}. Set URL and download links.json.`);
     });
 
     document.getElementById("download").addEventListener("click", () => {
@@ -290,56 +269,7 @@
       a.href = URL.createObjectURL(blob);
       a.download = "links.json";
       a.click();
-      setStatus("Downloaded. Replace links.json in your repo and push.");
-    });
-
-    document.getElementById("push").addEventListener("click", async () => {
-      const token = document.getElementById("token").value.trim();
-      if (!token) {
-        setStatus("Enter a GitHub token first.", false);
-        return;
-      }
-
-      setStatus("Pushing…");
-
-      try {
-        const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents/links.json`;
-        const getRes = await fetch(apiBase, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-        });
-
-        if (getRes.ok) {
-          const data = await getRes.json();
-          fileSha = data.sha;
-        }
-
-        const body = {
-          message: "Update links.json via admin",
-          content: btoa(unescape(encodeURIComponent(toJson()))),
-          branch: "main"
-        };
-        if (fileSha) body.sha = fileSha;
-
-        const putRes = await fetch(apiBase, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (!putRes.ok) {
-          const err = await putRes.json();
-          throw new Error(err.message || putRes.statusText);
-        }
-
-        fileSha = (await putRes.json()).content.sha;
-        setStatus("Pushed to GitHub. Live in ~1 min.");
-      } catch (e) {
-        setStatus("Push failed: " + e.message, false);
-      }
+      setStatus("Downloaded. Replace links.json in your repo and push to deploy.");
     });
 
     if (isAuthed()) {
