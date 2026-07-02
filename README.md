@@ -1,12 +1,12 @@
 # github-qr-router
 
-One QR code, many destinations. Same printed QR — change where it goes anytime from the admin UI.
+Free dynamic QR codes on GitHub Pages — host your own redirects, update destinations from a simple admin UI, no SaaS or reprinting.
 
 ```
 QR scan → https://you.github.io/REPO/a7k2m9 → reads links.json → redirects
 ```
 
-Each QR gets a permanent random ID (`a7k2m9`). You only ever change the destination URL.
+Each QR gets a permanent random ID (`a7k2m9`). Change where it points anytime — the printed code stays the same.
 
 ## Setup (once)
 
