@@ -62,3 +62,32 @@ The password is never stored in the repo. GitHub Actions hashes it at deploy tim
 | `admin-secrets.js` | Password hash for admin — generated at deploy, not in git |
 | `.github/workflows/pages.yml` | Deploy workflow — builds the site and injects `admin-secrets.js` from your GitHub Secret |
 | `scripts/setup-admin.mjs` | Local dev only — generates `admin-secrets.js` from `.env` |
+
+## Run locally
+
+Don't open `admin.html` directly — it won't work. Do this:
+
+**1. Set your local admin password**
+```bash
+cp .env.example .env
+```
+Edit `.env` and set `ADMIN_PASSWORD=whatever-you-want`
+
+**2. Generate admin-secrets.js**
+```bash
+node scripts/setup-admin.mjs
+```
+Run this again any time you change the password in `.env`.
+
+**3. Start a local server**
+```bash
+python3 -m http.server 8080
+```
+
+**4. Open admin**
+```
+http://localhost:8080/admin.html
+```
+Sign in with the password from your `.env` file.
+
+To stop the server: `Ctrl+C` in the terminal.

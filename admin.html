@@ -197,6 +197,15 @@
       el.style.color = ok ? "#666" : "#c00";
     }
 
+    async function downloadQr(id, url) {
+      const QRCode = await import("https://esm.sh/qrcode@1.5.4");
+      const dataUrl = await QRCode.toDataURL(url, { width: 512, margin: 2 });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `qr-${id}.png`;
+      a.click();
+    }
+
     function render() {
       const list = document.getElementById("list");
       list.innerHTML = "";
@@ -215,7 +224,8 @@
           <label>Destination URL</label>
           <input type="url" data-id="${id}" data-field="url" value="${escapeAttr(entry.url)}" placeholder="https://">
           <div class="qr-link">${baseUrl}/${id}</div>
-          <button type="button" class="small" data-copy="${baseUrl}/${id}">Copy QR URL</button>
+          <button type="button" class="small" data-copy="${baseUrl}/${id}">Copy URL</button>
+          <button type="button" class="small" data-qr="${id}" data-qr-url="${baseUrl}/${id}">Download QR</button>
         `;
         list.appendChild(card);
       }
@@ -241,7 +251,19 @@
       list.querySelectorAll("[data-copy]").forEach(btn => {
         btn.addEventListener("click", () => {
           navigator.clipboard.writeText(btn.dataset.copy);
-          setStatus("Copied QR URL.");
+          setStatus("Copied URL.");
+        });
+      });
+
+      list.querySelectorAll("[data-qr]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          try {
+            setStatus("Generating QR…");
+            await downloadQr(btn.dataset.qr, btn.dataset.qrUrl);
+            setStatus(`Downloaded qr-${btn.dataset.qr}.png`);
+          } catch {
+            setStatus("Could not generate QR.", false);
+          }
         });
       });
     }
