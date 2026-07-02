@@ -25,10 +25,11 @@ Site: `https://YOUR_USERNAME.github.io/REPO/`
 
 1. Open `https://YOUR_USERNAME.github.io/REPO/admin.html`
 2. Sign in with your `ADMIN_PASSWORD`
-3. **+ New QR** → set description + destination URL → copy the QR URL
-4. **Download links.json** → replace the file in your repo → push
+3. Paste a [GitHub token](https://github.com/settings/tokens) (repo scope) — stays in your tab only
+4. **+ New QR** → set description + destination URL → copy the QR URL
+5. **Save to GitHub**
 
-That's it. Edit destinations the same way — admin → download → push.
+Or **Download links.json** and push manually if you prefer.
 
 Changes go live in ~1 min.
 
