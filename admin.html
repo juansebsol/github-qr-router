@@ -156,7 +156,7 @@
     async function tryLogin() {
       if (!window.ADMIN_PASSWORD_HASH) {
         document.getElementById("login-error").textContent =
-          "Admin password not set. Run: node scripts/setup-admin.mjs";
+          "Admin password not configured on this deploy. Set ADMIN_PASSWORD in GitHub → Settings → Secrets → Actions, switch Pages source to GitHub Actions, then redeploy.";
         return;
       }
 
