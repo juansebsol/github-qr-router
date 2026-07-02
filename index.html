@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Redirecting…</title>
   <script>
+    function repoBase() {
+      const segments = location.pathname.split("/").filter(Boolean);
+      if (location.hostname.endsWith(".github.io") && segments.length > 1) {
+        return "/" + segments[0];
+      }
+      return "";
+    }
+
     function resolveUrl(links, slug) {
       const entry = links[slug];
       if (!entry) return null;
@@ -12,16 +20,21 @@
     }
 
     async function redirect() {
-      const links = await fetch("./links.json?t=" + Date.now()).then(r => r.json());
-      const slug = window.location.pathname.split("/").filter(Boolean).pop();
-      const url = resolveUrl(links, slug);
+      try {
+        const segments = location.pathname.split("/").filter(Boolean);
+        const slug = segments[segments.length - 1] || "";
+        const links = await fetch(location.origin + repoBase() + "/links.json?t=" + Date.now()).then(r => r.json());
+        const url = resolveUrl(links, slug);
 
-      if (!url) {
-        document.body.textContent = "Link not found.";
-        return;
+        if (!url) {
+          document.body.textContent = "Link not found.";
+          return;
+        }
+
+        window.location.replace(url);
+      } catch {
+        document.body.textContent = "Could not load links.";
       }
-
-      window.location.replace(url);
     }
 
     redirect();

@@ -97,10 +97,12 @@
 
   <script>
     const CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
-    const basePath = location.pathname.replace(/\/admin\.html$/, "").replace(/\/$/, "");
-    const baseUrl = location.origin + basePath;
-    const parts = basePath.split("/").filter(Boolean);
-    const repo = parts[parts.length - 1] || "";
+    const pathSegments = location.pathname.split("/").filter(Boolean);
+    const repoBase = (location.hostname.endsWith(".github.io") && pathSegments.length > 0)
+      ? "/" + pathSegments[0]
+      : "";
+    const baseUrl = location.origin + repoBase;
+    const repo = pathSegments[0] || "";
     const owner = location.hostname.split(".")[0];
 
     let links = {};
@@ -189,7 +191,7 @@
 
     async function load() {
       try {
-        const res = await fetch("./links.json?t=" + Date.now());
+        const res = await fetch(baseUrl + "/links.json?t=" + Date.now());
         links = await res.json();
         render();
         setStatus("Loaded.");
