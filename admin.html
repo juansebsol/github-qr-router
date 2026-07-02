@@ -74,28 +74,51 @@
     .github-box summary { cursor: pointer; font-size: 0.9rem; color: #666; }
     .github-box input { margin-top: 0.5rem; }
     .hint { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
+    .login-box {
+      max-width: 320px;
+      margin: 4rem auto;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    .login-box h1 { margin-bottom: 1rem; }
+    .login-error { color: #c00; font-size: 0.85rem; min-height: 1.25rem; }
   </style>
+  <script src="./admin-secrets.js"></script>
 </head>
 <body>
-  <h1>QR Router</h1>
-  <div id="list"></div>
-  <div class="actions toolbar">
-    <button type="button" id="add">+ New QR</button>
-    <button type="button" class="primary" id="download">Download links.json</button>
+  <div id="login-screen" class="login-box" hidden>
+    <h1>QR Router</h1>
+    <label for="login-password">Password</label>
+    <input type="password" id="login-password" autocomplete="current-password">
+    <p class="login-error" id="login-error"></p>
+    <button type="button" class="primary" id="login-btn">Sign in</button>
   </div>
-  <p class="status" id="status"></p>
 
-  <details class="github-box">
-    <summary>Push directly to GitHub (optional)</summary>
-    <label for="token">Personal access token (repo scope)</label>
-    <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
-    <p class="hint">Token stays in this tab only. <a href="https://github.com/settings/tokens" target="_blank">Create one</a> with repo access.</p>
-    <div class="actions">
-      <button type="button" class="primary" id="push">Push to GitHub</button>
+  <div id="app" hidden>
+    <h1>QR Router</h1>
+    <div id="list"></div>
+    <div class="actions toolbar">
+      <button type="button" id="add">+ New QR</button>
+      <button type="button" class="primary" id="download">Download links.json</button>
+      <button type="button" id="logout">Sign out</button>
     </div>
-  </details>
+    <p class="status" id="status"></p>
+
+    <details class="github-box">
+      <summary>Push directly to GitHub (optional)</summary>
+      <label for="token">Personal access token (repo scope)</label>
+      <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
+      <p class="hint">Token stays in this tab only. <a href="https://github.com/settings/tokens" target="_blank">Create one</a> with repo access.</p>
+      <div class="actions">
+        <button type="button" class="primary" id="push">Push to GitHub</button>
+      </div>
+    </details>
+  </div>
 
   <script>
+    const AUTH_KEY = "qr-admin-auth";
     const CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
     const pathSegments = location.pathname.split("/").filter(Boolean);
     const repoBase = (location.hostname.endsWith(".github.io") && pathSegments.length > 0)
@@ -107,6 +130,54 @@
 
     let links = {};
     let fileSha = null;
+
+    async function hashPassword(password) {
+      const data = new TextEncoder().encode(password);
+      const buf = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function isAuthed() {
+      return sessionStorage.getItem(AUTH_KEY) === window.ADMIN_PASSWORD_HASH;
+    }
+
+    function showLogin(msg) {
+      document.getElementById("app").hidden = true;
+      const login = document.getElementById("login-screen");
+      login.hidden = false;
+      document.getElementById("login-error").textContent = msg || "";
+    }
+
+    function showApp() {
+      document.getElementById("login-screen").hidden = true;
+      document.getElementById("app").hidden = false;
+    }
+
+    async function tryLogin() {
+      if (!window.ADMIN_PASSWORD_HASH) {
+        document.getElementById("login-error").textContent =
+          "Admin password not set. Run: node scripts/setup-admin.mjs";
+        return;
+      }
+
+      const password = document.getElementById("login-password").value;
+      const hash = await hashPassword(password);
+
+      if (hash !== window.ADMIN_PASSWORD_HASH) {
+        document.getElementById("login-error").textContent = "Wrong password.";
+        return;
+      }
+
+      sessionStorage.setItem(AUTH_KEY, hash);
+      showApp();
+      load();
+    }
+
+    function logout() {
+      sessionStorage.removeItem(AUTH_KEY);
+      document.getElementById("login-password").value = "";
+      showLogin();
+    }
 
     function genId() {
       let id;
@@ -200,6 +271,12 @@
       }
     }
 
+    document.getElementById("login-btn").addEventListener("click", tryLogin);
+    document.getElementById("login-password").addEventListener("keydown", e => {
+      if (e.key === "Enter") tryLogin();
+    });
+    document.getElementById("logout").addEventListener("click", logout);
+
     document.getElementById("add").addEventListener("click", () => {
       const id = genId();
       links[id] = { url: "", description: "" };
@@ -265,7 +342,12 @@
       }
     });
 
-    load();
+    if (isAuthed()) {
+      showApp();
+      load();
+    } else {
+      showLogin();
+    }
   </script>
 </body>
 </html>

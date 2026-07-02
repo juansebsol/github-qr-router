@@ -19,7 +19,8 @@ Edit `links.json`, push, done. Same QR, new destination.
 | `index.html` | Redirect script (root URL) |
 | `404.html` | Same script — **required** so slug paths work on GitHub Pages |
 | `links.json` | QR ID → URL + description |
-| `admin.html` | Simple UI to manage QR codes |
+| `admin.html` | Simple UI to manage QR codes (password protected) |
+| `admin-secrets.js` | Password hash for admin (generated from `.env`) |
 
 `links.json` example:
 
@@ -61,12 +62,15 @@ git push -u origin main
 
 ### 3. Enable Pages
 
-1. Repo → **Settings** → **Pages**
-2. **Build and deployment** → Source: **Deploy from a branch**
-3. Branch: `main` → folder: `/ (root)` → **Save**
-4. Wait 1–2 minutes
+1. Repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+2. Name: `ADMIN_PASSWORD` → Value: your admin password → **Add secret**
+3. Repo → **Settings** → **Pages**
+4. **Build and deployment** → Source: **GitHub Actions** (not "Deploy from a branch")
+5. Push to `main` — the workflow generates `admin-secrets.js` from your secret at deploy time
 
 Your site: `https://YOUR_USERNAME.github.io/qr/`
+
+You never hash the password yourself — GitHub Actions does it during deploy. The browser still compares against a hash (not your raw password) because there's no server at runtime.
 
 ### 4. Set your destinations
 
@@ -76,7 +80,25 @@ Open `admin.html` on your live site:
 https://YOUR_USERNAME.github.io/qr/admin.html
 ```
 
-Create QRs, set URLs and descriptions, then **Download links.json** and push — or use **Push to GitHub** with a [personal access token](https://github.com/settings/tokens) (repo scope).
+You'll need the admin password (see below). Create QRs, set URLs and descriptions, then **Download links.json** and push — or use **Push to GitHub** with a [personal access token](https://github.com/settings/tokens) (repo scope).
+
+### Admin password
+
+Set once in GitHub: **Settings → Secrets and variables → Actions → `ADMIN_PASSWORD`**
+
+Change it there anytime, then re-run the deploy workflow or push any commit.
+
+**Local dev only** (optional):
+
+```bash
+cp .env.example .env   # set ADMIN_PASSWORD
+node scripts/setup-admin.mjs
+python3 -m http.server 8080
+```
+
+- Secret never goes in the repo
+- `admin-secrets.js` is generated at deploy — don't commit it
+- Stops casual visitors; not bulletproof on a public repo
 
 ### 5. Make the QR code
 

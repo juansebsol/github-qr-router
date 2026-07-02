@@ -1,0 +1,43 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate admin-secrets.js from GitHub Secret
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$ADMIN_PASSWORD" ]; then
+            echo 'window.ADMIN_PASSWORD_HASH = "";' > admin-secrets.js
+            echo "Warning: ADMIN_PASSWORD secret not set — admin will be locked."
+          else
+            HASH=$(node -e "const c=require('crypto');console.log(c.createHash('sha256').update(process.env.ADMIN_PASSWORD).digest('hex'))")
+            echo "window.ADMIN_PASSWORD_HASH = \"$HASH\";" > admin-secrets.js
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
