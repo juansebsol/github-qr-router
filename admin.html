@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QR Router — Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      background: #f8f9fa;
+      color: #1a1a1a;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 1rem; }
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .id {
+      font-family: ui-monospace, monospace;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 0.25rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .qr-link {
+      font-size: 0.8rem;
+      color: #0066cc;
+      word-break: break-all;
+    }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    button.danger { color: #c00; border-color: #c00; }
+    button.small { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    .toolbar { margin-bottom: 1rem; }
+    .status { font-size: 0.85rem; color: #666; margin-top: 0.75rem; }
+    .github-box {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e0e0e0;
+    }
+    .github-box summary { cursor: pointer; font-size: 0.9rem; color: #666; }
+    .github-box input { margin-top: 0.5rem; }
+    .hint { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+  <h1>QR Router</h1>
+  <div id="list"></div>
+  <div class="actions toolbar">
+    <button type="button" id="add">+ New QR</button>
+    <button type="button" class="primary" id="download">Download links.json</button>
+  </div>
+  <p class="status" id="status"></p>
+
+  <details class="github-box">
+    <summary>Push directly to GitHub (optional)</summary>
+    <label for="token">Personal access token (repo scope)</label>
+    <input type="password" id="token" placeholder="ghp_…" autocomplete="off">
+    <p class="hint">Token stays in this tab only. <a href="https://github.com/settings/tokens" target="_blank">Create one</a> with repo access.</p>
+    <div class="actions">
+      <button type="button" class="primary" id="push">Push to GitHub</button>
+    </div>
+  </details>
+
+  <script>
+    const CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const basePath = location.pathname.replace(/\/admin\.html$/, "").replace(/\/$/, "");
+    const baseUrl = location.origin + basePath;
+    const parts = basePath.split("/").filter(Boolean);
+    const repo = parts[parts.length - 1] || "";
+    const owner = location.hostname.split(".")[0];
+
+    let links = {};
+    let fileSha = null;
+
+    function genId() {
+      let id;
+      do {
+        id = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join("");
+      } while (links[id]);
+      return id;
+    }
+
+    function normalize(entry) {
+      if (typeof entry === "string") return { url: entry, description: "" };
+      return { url: entry.url || "", description: entry.description || "" };
+    }
+
+    function setStatus(msg, ok = true) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.style.color = ok ? "#666" : "#c00";
+    }
+
+    function render() {
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+
+      for (const [id, raw] of Object.entries(links)) {
+        const entry = normalize(raw);
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="card-header">
+            <span class="id">${id}</span>
+            <button type="button" class="small danger" data-delete="${id}">Delete</button>
+          </div>
+          <label>Description</label>
+          <input type="text" data-id="${id}" data-field="description" value="${escapeAttr(entry.description)}" placeholder="e.g. Business card sticker">
+          <label>Destination URL</label>
+          <input type="url" data-id="${id}" data-field="url" value="${escapeAttr(entry.url)}" placeholder="https://">
+          <div class="qr-link">${baseUrl}/${id}</div>
+          <button type="button" class="small" data-copy="${baseUrl}/${id}">Copy QR URL</button>
+        `;
+        list.appendChild(card);
+      }
+
+      list.querySelectorAll("input").forEach(input => {
+        input.addEventListener("input", () => {
+          const id = input.dataset.id;
+          const field = input.dataset.field;
+          links[id] = normalize(links[id]);
+          links[id][field] = input.value;
+        });
+      });
+
+      list.querySelectorAll("[data-delete]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (confirm(`Delete ${btn.dataset.delete}?`)) {
+            delete links[btn.dataset.delete];
+            render();
+          }
+        });
+      });
+
+      list.querySelectorAll("[data-copy]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          navigator.clipboard.writeText(btn.dataset.copy);
+          setStatus("Copied QR URL.");
+        });
+      });
+    }
+
+    function escapeAttr(str) {
+      return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    }
+
+    function toJson() {
+      const out = {};
+      for (const [id, raw] of Object.entries(links)) {
+        const entry = normalize(raw);
+        out[id] = { url: entry.url, description: entry.description };
+      }
+      return JSON.stringify(out, null, 2) + "\n";
+    }
+
+    async function load() {
+      try {
+        const res = await fetch("./links.json?t=" + Date.now());
+        links = await res.json();
+        render();
+        setStatus("Loaded.");
+      } catch {
+        setStatus("Could not load links.json.", false);
+      }
+    }
+
+    document.getElementById("add").addEventListener("click", () => {
+      const id = genId();
+      links[id] = { url: "", description: "" };
+      render();
+      setStatus(`Created ${id}. Set URL and download or push.`);
+    });
+
+    document.getElementById("download").addEventListener("click", () => {
+      const blob = new Blob([toJson()], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "links.json";
+      a.click();
+      setStatus("Downloaded. Replace links.json in your repo and push.");
+    });
+
+    document.getElementById("push").addEventListener("click", async () => {
+      const token = document.getElementById("token").value.trim();
+      if (!token) {
+        setStatus("Enter a GitHub token first.", false);
+        return;
+      }
+
+      setStatus("Pushing…");
+
+      try {
+        const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents/links.json`;
+        const getRes = await fetch(apiBase, {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
+        });
+
+        if (getRes.ok) {
+          const data = await getRes.json();
+          fileSha = data.sha;
+        }
+
+        const body = {
+          message: "Update links.json via admin",
+          content: btoa(unescape(encodeURIComponent(toJson()))),
+          branch: "main"
+        };
+        if (fileSha) body.sha = fileSha;
+
+        const putRes = await fetch(apiBase, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!putRes.ok) {
+          const err = await putRes.json();
+          throw new Error(err.message || putRes.statusText);
+        }
+
+        fileSha = (await putRes.json()).content.sha;
+        setStatus("Pushed to GitHub. Live in ~1 min.");
+      } catch (e) {
+        setStatus("Push failed: " + e.message, false);
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

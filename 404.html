@@ -5,11 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Redirecting…</title>
   <script>
+    function resolveUrl(links, slug) {
+      const entry = links[slug];
+      if (!entry) return null;
+      return typeof entry === "string" ? entry : entry.url || null;
+    }
+
     async function redirect() {
       const links = await fetch("./links.json?t=" + Date.now()).then(r => r.json());
-
       const slug = window.location.pathname.split("/").filter(Boolean).pop();
-      const url = links[slug] || links.go;
+      const url = resolveUrl(links, slug);
+
+      if (!url) {
+        document.body.textContent = "Link not found.";
+        return;
+      }
 
       window.location.replace(url);
     }

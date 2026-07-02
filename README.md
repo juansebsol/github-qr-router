@@ -17,22 +17,29 @@ Edit `links.json`, push, done. Same QR, new destination.
 | File | Purpose |
 |------|---------|
 | `index.html` | Redirect script (root URL) |
-| `404.html` | Same script — **required** so `/go`, `/menu`, etc. work on GitHub Pages |
-| `links.json` | Slug → destination URL map |
+| `404.html` | Same script — **required** so slug paths work on GitHub Pages |
+| `links.json` | QR ID → URL + description |
+| `admin.html` | Simple UI to manage QR codes |
 
 `links.json` example:
 
 ```json
 {
-  "go": "https://fractals.finance",
-  "xnet": "https://xnet.company",
-  "menu": "https://myrestaurant.com/menu"
+  "a7k2m9": {
+    "url": "https://fractals.finance",
+    "description": "Business card sticker"
+  },
+  "x3p8q1": {
+    "url": "https://xnet.company",
+    "description": "Laptop back sticker"
+  }
 }
 ```
 
-- `https://you.github.io/qr/go` → `links.go`
-- `https://you.github.io/qr/xnet` → `links.xnet`
-- Unknown slug → falls back to `links.go`
+- Each key is a **permanent random ID** — print it on the QR, never change it
+- `description` is for your notes only (not shown to visitors)
+- `https://you.github.io/qr/a7k2m9` → redirects to that entry's `url`
+- Unknown slug → "Link not found"
 
 ## Deploy to GitHub Pages
 
@@ -47,7 +54,7 @@ Edit `links.json`, push, done. Same QR, new destination.
 
 ```bash
 git remote add origin git@github.com:YOUR_USERNAME/qr.git
-git add index.html 404.html links.json README.md
+git add index.html 404.html admin.html links.json README.md
 git commit -m "Add QR redirect router"
 git push -u origin main
 ```
@@ -63,14 +70,20 @@ Your site: `https://YOUR_USERNAME.github.io/qr/`
 
 ### 4. Set your destinations
 
-Edit `links.json` with real URLs, commit, push.
+Open `admin.html` on your live site:
+
+```
+https://YOUR_USERNAME.github.io/qr/admin.html
+```
+
+Create QRs, set URLs and descriptions, then **Download links.json** and push — or use **Push to GitHub** with a [personal access token](https://github.com/settings/tokens) (repo scope).
 
 ### 5. Make the QR code
 
-Point the QR at:
+Point the QR at the ID URL shown in admin, e.g.:
 
 ```
-https://YOUR_USERNAME.github.io/qr/go
+https://YOUR_USERNAME.github.io/qr/a7k2m9
 ```
 
 Use any QR generator ([qr-code-generator.com](https://www.qr-code-generator.com/), macOS Shortcuts, etc.). You never reprint the QR — only change `links.json`.
@@ -107,21 +120,7 @@ GitHub Pages is static. A request to `/qr/go` does **not** automatically run `in
 
 ## Multiple QR codes, one repo
 
-Add more keys to `links.json`:
-
-```json
-{
-  "go": "https://main-site.com",
-  "menu": "https://main-site.com/menu",
-  "hire": "https://main-site.com/careers"
-}
-```
-
-| QR points to | Redirects to |
-|--------------|--------------|
-| `…/qr/go` | `links.go` |
-| `…/qr/menu` | `links.menu` |
-| `…/qr/hire` | `links.hire` |
+Use **+ New QR** in admin. Each gets a random ID. The description field is your label ("biz card", "flyer batch 2") — only you see it in admin and `links.json`.
 
 ## Custom domain (optional)
 

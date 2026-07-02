@@ -1,5 +1,14 @@
 {
-  "go": "https://example.com",
-  "xnet": "https://example.com/xnet",
-  "menu": "https://example.com/menu"
+  "a7k2m9": {
+    "url": "https://example.com",
+    "description": "Example QR #1"
+  },
+  "x3p8q1": {
+    "url": "https://example.com/xnet",
+    "description": "Example QR #2"
+  },
+  "k4n7w2": {
+    "url": "https://example.com/menu",
+    "description": "Example QR #3"
+  }
 }
